@@ -1,3 +1,4 @@
+from django.contrib.auth import authenticate, login, logout
 from django.core.urlresolvers import reverse
 from django.http import HttpResponseRedirect, HttpResponse
 from django.shortcuts import render
@@ -43,7 +44,7 @@ class LoginView(TemplateView):
             login(self.request, form.get_user())
 
             # Redirect to dashboard
-            return HttpResponseRedirect(reverse('dasboard'))
+            return HttpResponseRedirect(reverse('dashboard'))
         else:
             # form is not valid meaning that username/password is invalid
             # or user doesn't not exists in the database.
