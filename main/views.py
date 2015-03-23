@@ -6,7 +6,8 @@ from django.views.generic import TemplateView, View
 
 from braces.views import LoginRequiredMixin
 
-from accounts.forms import LoginForm
+from accounts.mixins import UserMixin, AuthenticateMixin
+from accounts.forms import LoginForm, UserForm, UserProfileForm
 
 
 class IndexView(TemplateView):
@@ -52,10 +53,50 @@ class LoginView(TemplateView):
             return render(self.request, self.template_name, self.context)
 
 
-class LogoutView(LoginRequiredMixin, View):
+class LogoutView(LoginRequiredMixin, View): 
     """ Class based view that remove the session of the authenticated user.
     """
     def get(self, *args, **kwargs):
         # Calls django's `logout` function
         logout(self.request)
         return HttpResponseRedirect(reverse('user_login'))
+
+
+class SignupView(UserMixin, AuthenticateMixin, TemplateView):
+    """ Class based view that handles the user creation.
+    """
+    template_name = 'accounts/signup.html'
+    context = {}
+
+    def get(self, *args, **kwargs):
+        # render signup form
+        self.context['form'] = UserForm()
+        self.context['profileform'] = UserProfileForm()
+
+        return render(self.request, self.template_name, self.context)
+
+    def post(self, *args, **kwargs):
+        data = self.request.POST
+        # Load User and Profile forms
+        form = UserForm(data)
+        profileform = UserProfileForm(data)
+
+        # Calls the validation method of the two model forms
+        if form.is_valid() and profileform.is_valid():
+            # create and save user object
+            user = form.save()
+            # create and save profile object
+            # assign `user` as a fk of the user field in the profile object
+            profile = profileform.save(commit=False)
+            profile.user = user
+            profile.save()
+            # authenticate user
+            self.login_user_no_password(user)
+
+            # Redirect to dashboard
+            return HttpResponseRedirect(reverse('dashboard'))
+
+        else:
+            self.context['form'] = form
+            self.context['profileform'] = profileform
+            return render(self.request, self.template_name, self.context)
